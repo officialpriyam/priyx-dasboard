@@ -22,7 +22,7 @@ import {
 	Users,
 } from 'lucide-react';
 import type { DashboardUser, GuildDetails } from '@/lib/api';
-import { apiBase, iconFallback } from '@/lib/api';
+import { apiPath, iconFallback } from '@/lib/api';
 
 const primaryLinks = [
 	{ href: '', label: 'Dashboard', icon: Home },
@@ -58,7 +58,7 @@ export function DashboardShell({
 	const base = `/guild/${guild.id}`;
 
 	async function logout() {
-		await fetch(`${apiBase}/auth/logout`, {
+		await fetch(apiPath('/auth/logout'), {
 			method: 'POST',
 			credentials: 'include',
 		}).catch(() => undefined);

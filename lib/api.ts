@@ -1,8 +1,32 @@
-export const apiBase =
-	process.env.NEXT_PUBLIC_PRIYX_API_URL ?? '/api/priyx';
+const defaultApiBase = '/api/priyx';
 
-function apiPath(path: string): string {
-	return `${apiBase.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+function publicApiBase(): string {
+	const configured = process.env.NEXT_PUBLIC_PRIYX_API_URL?.trim();
+	if (!configured) {
+		return defaultApiBase;
+	}
+
+	if (
+		typeof window !== 'undefined' &&
+		/^https?:\/\//i.test(configured)
+	) {
+		try {
+			const url = new URL(configured);
+			if (url.origin !== window.location.origin) {
+				return defaultApiBase;
+			}
+		} catch {
+			return defaultApiBase;
+		}
+	}
+
+	return configured;
+}
+
+export function apiPath(path: string): string {
+	return `${publicApiBase().replace(/\/+$/, '')}${
+		path.startsWith('/') ? path : `/${path}`
+	}`;
 }
 
 export interface DashboardUser {

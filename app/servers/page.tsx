@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Bot, LogOut, Search, Server } from 'lucide-react';
-import { apiBase, iconFallback, inviteUrl, type DashboardGuild } from '@/lib/api';
+import { apiPath, iconFallback, inviteUrl, type DashboardGuild } from '@/lib/api';
 import { useAuth } from '@/lib/hooks';
 import { ErrorBox, LoadingScreen } from '@/components/DashboardShell';
 
@@ -27,7 +27,7 @@ export default function ServersPage() {
 	}, [auth, query, filter]);
 
 	async function logout() {
-		await fetch(`${apiBase}/auth/logout`, {
+		await fetch(apiPath('/auth/logout'), {
 			method: 'POST',
 			credentials: 'include',
 		}).catch(() => undefined);

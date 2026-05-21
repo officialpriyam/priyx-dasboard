@@ -36,16 +36,17 @@ api:
   publicUrl: "https://your-bot-api-domain.example.com"
   dashboardUrl: "https://your-vercel-app.vercel.app"
   corsOrigin: "https://your-vercel-app.vercel.app"
+  oauthRedirectUri: "https://your-vercel-app.vercel.app/api/priyx/auth/callback"
   requireApiKey: true
 ```
 
 In the Discord developer portal, add this redirect URL:
 
 ```text
-https://your-bot-api-domain.example.com/api/auth/callback
+https://your-vercel-app.vercel.app/api/priyx/auth/callback
 ```
 
-The dashboard can be hosted on Vercel, but the bot API still needs to run on a reachable server because Discord OAuth, guild data, and module writes go through the Priyx API addon.
+The dashboard can be hosted on Vercel, but the bot API still needs to run on a reachable server because Discord OAuth, guild data, and module writes go through the Priyx API addon. The OAuth callback must use the dashboard `/api/priyx` proxy so the login cookie is saved on the dashboard domain.
 
 ## License
 
