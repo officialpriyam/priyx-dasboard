@@ -38,7 +38,6 @@ const avatarShapeOptions = ['circle', 'square', 'rounded'];
 const geminiModelOptions = [
 	'gemini-2.5-flash-lite',
 	'gemini-2.5-flash',
-	'gemini-3.5-flash',
 ];
 const aiManagedKeys = new Set(['supportChannel', 'knowledgeBase', 'knowledgeDocuments']);
 
