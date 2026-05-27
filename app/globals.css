@@ -13,11 +13,19 @@
 	--green: #45e889;
 	--danger: #ff6675;
 	--yellow: #ffe044;
+	--dashboard-zoom: 0.8;
 	color-scheme: dark;
 }
 
 * {
 	box-sizing: border-box;
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+	width: 0;
+	height: 0;
 }
 
 html,
@@ -35,11 +43,27 @@ body {
 	letter-spacing: 0;
 }
 
+@media (min-width: 761px) {
+	body {
+		width: calc(100% / var(--dashboard-zoom));
+		min-height: calc(100vh / var(--dashboard-zoom));
+		zoom: var(--dashboard-zoom);
+	}
+}
+
 button,
 input,
 select,
 textarea {
 	font: inherit;
+}
+
+select,
+option,
+optgroup {
+	background: #171120;
+	color: var(--text);
+	color-scheme: dark;
 }
 
 button,
@@ -1802,6 +1826,43 @@ kbd {
 	background: rgba(255, 102, 117, 0.08);
 	color: #ffacb6;
 	cursor: pointer;
+}
+
+.module-config-form .config-section .config-section,
+.module-config-form .object-array .object-array .object-array-card {
+	padding-left: 0;
+	border-left: 0;
+}
+
+.module-config-form .object-array-card {
+	padding: 14px 0 0;
+	border-left: 0;
+	border-top: 1px solid rgba(128, 103, 255, 0.16);
+}
+
+.module-config-form .object-array-card .object-array-card {
+	padding-top: 0;
+	border-top: 0;
+}
+
+.module-config-form .config-section {
+	padding-bottom: 18px;
+}
+
+.module-config-form .nested-grid {
+	gap: 14px 18px;
+}
+
+.module-config-form select,
+.module-config-form option,
+.module-config-form optgroup {
+	background: #171120;
+	color: var(--text);
+	color-scheme: dark;
+}
+
+.module-config-form select:focus {
+	background: #171120;
 }
 
 .ghost-button {

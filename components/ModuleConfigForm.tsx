@@ -35,6 +35,11 @@ const messageModeOptions = ['plain', 'embed', 'both'];
 const embedBuilderModeOptions = ['plain', 'embed', 'v2'];
 const cardLayoutOptions = ['modern', 'classic', 'compact'];
 const avatarShapeOptions = ['circle', 'square', 'rounded'];
+const geminiModelOptions = [
+	'gemini-2.5-flash-lite',
+	'gemini-2.5-flash',
+	'gemini-3.5-flash',
+];
 const aiManagedKeys = new Set(['supportChannel', 'knowledgeBase', 'knowledgeDocuments']);
 
 function isRecord(value: ConfigValue): value is ConfigRecord {
@@ -275,6 +280,9 @@ function primitiveKind(path: string[], value: ConfigValue) {
 	}
 	if (key === 'activitytype') {
 		return 'activityType';
+	}
+	if (key === 'model') {
+		return 'aiModel';
 	}
 	if (
 		key.includes('message') ||
@@ -531,6 +539,13 @@ export function ModuleConfigForm({
 				path,
 				value,
 				activityTypeOptions.map((option) => ({ value: option, label: labelFor(option) })),
+				false,
+			);
+		} else if (kind === 'aiModel') {
+			control = renderSelect(
+				path,
+				value,
+				geminiModelOptions.map((option) => ({ value: option, label: option })),
 				false,
 			);
 		} else if (kind === 'textarea') {
