@@ -97,25 +97,27 @@ export default function ModuleEditorPage() {
 			/>
 
 			<section className="editor-layout">
-				<div className="editor-panel">
-					<div className="editor-header">
-						<div>
-							<h2>Module State</h2>
-							<p>Enable or disable this module for only this server.</p>
+				<aside className="module-control-rail">
+					<div className="module-state-panel">
+						<div className="editor-header">
+							<div>
+								<h2>Module State</h2>
+								<p>Enable or disable this module for only this server.</p>
+							</div>
+							<button
+								className={`toggle large ${enabled ? 'on' : ''}`}
+								onClick={() => setEnabled((value) => !value)}
+								type="button"
+							>
+								<span />
+							</button>
 						</div>
-						<button
-							className={`toggle large ${enabled ? 'on' : ''}`}
-							onClick={() => setEnabled((value) => !value)}
-							type="button"
-						>
-							<span />
-						</button>
+						<div className="module-state">
+							<SlidersHorizontal size={18} />
+							<span>{enabled ? 'Active in this server' : 'Inactive in this server'}</span>
+						</div>
 					</div>
-					<div className="module-state">
-						<SlidersHorizontal size={18} />
-						<span>{enabled ? 'Active in this server' : 'Inactive in this server'}</span>
-					</div>
-				</div>
+				</aside>
 
 				<div className="editor-panel config-panel">
 					<div className="editor-header">
@@ -131,6 +133,7 @@ export default function ModuleEditorPage() {
 					<ModuleConfigForm
 						config={config}
 						guild={payload.guild}
+						moduleName={moduleInfo.name}
 						onChange={setConfig}
 					/>
 					{message ? <div className="save-message">{message}</div> : null}
