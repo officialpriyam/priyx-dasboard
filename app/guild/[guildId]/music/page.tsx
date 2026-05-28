@@ -172,11 +172,16 @@ export default function MusicPlayerPage() {
 
 		setSearching(true);
 		setMessage(null);
+		setResults([]);
 		try {
 			const response = await apiFetch<MusicSearchPayload>(
 				`/guilds/${params.guildId}/music/search?q=${encodeURIComponent(query.trim())}`,
 			);
-			setResults(response.tracks.filter(presentTrack));
+			const tracks = response.tracks.filter(presentTrack);
+			setResults(tracks);
+			if (tracks.length === 0) {
+				setMessage('No search results found. Try another song name or link.');
+			}
 		} catch (err) {
 			setMessage(err instanceof Error ? err.message : 'Search failed.');
 		} finally {
