@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
 	Disc3,
@@ -29,6 +29,9 @@ import {
 } from '@/lib/api';
 import { useAuth, useGuild } from '@/lib/hooks';
 
+type PlayerState = NonNullable<MusicPlayerPayload['player']>;
+type LoopMode = PlayerState['loop'];
+
 function presentTrack(track: MusicTrack | null): track is MusicTrack {
 	return Boolean(track);
 }
@@ -48,6 +51,48 @@ function formatDuration(ms: number): string {
 	return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+function indexedQueue(tracks: MusicTrack[]): MusicTrack[] {
+	return tracks.map((track, index) => ({ ...track, index: index + 1 }));
+}
+
+function queueTrack(track: MusicTrack): MusicTrack {
+	const { index: _index, ...rest } = track;
+	return rest;
+}
+
+function trackQuery(track: MusicTrack): string {
+	if (track.uri) {
+		return track.uri;
+	}
+
+	if (track.identifier && /^[a-zA-Z0-9_-]{11}$/.test(track.identifier)) {
+		return `https://www.youtube.com/watch?v=${track.identifier}`;
+	}
+
+	return `${track.author} ${track.title}`.trim();
+}
+
+function nextLoopMode(mode: LoopMode): LoopMode {
+	if (mode === 'none') {
+		return 'track';
+	}
+
+	if (mode === 'track') {
+		return 'queue';
+	}
+
+	return 'none';
+}
+
+function shuffledTracks(tracks: MusicTrack[]): MusicTrack[] {
+	const next = [...tracks];
+	for (let index = next.length - 1; index > 0; index -= 1) {
+		const swap = Math.floor(Math.random() * (index + 1));
+		[next[index], next[swap]] = [next[swap], next[index]];
+	}
+	return next;
+}
+
 export default function MusicPlayerPage() {
 	const params = useParams<{ guildId: string }>();
 	const { auth, loading: authLoading } = useAuth();
@@ -62,6 +107,8 @@ export default function MusicPlayerPage() {
 	const [lyricsOpen, setLyricsOpen] = useState(false);
 	const [lyrics, setLyrics] = useState<MusicLyricsPayload | null>(null);
 	const [lyricsMessage, setLyricsMessage] = useState<string | null>(null);
+	const optimisticUntilRef = useRef(0);
+	const lyricLineRefs = useRef<Array<HTMLParagraphElement | null>>([]);
 
 	const current = status?.player?.current ?? null;
 	const queue = useMemo(
@@ -72,27 +119,31 @@ export default function MusicPlayerPage() {
 		() => (status?.suggestions ?? []).filter(presentTrack),
 		[status],
 	);
+	const playerPosition = status?.player?.position ?? lyrics?.position ?? 0;
 	const progress =
-		current && status?.player && current.duration > 0
-			? Math.min(100, Math.max(0, (status.player.position / current.duration) * 100))
+		current && current.duration > 0
+			? Math.min(100, Math.max(0, (playerPosition / current.duration) * 100))
 			: 0;
 	const activeLyricIndex = useMemo(() => {
-		if (!lyrics?.synced || !status?.player) {
+		if (!lyrics?.synced) {
 			return -1;
 		}
 
 		let active = -1;
 		for (let index = 0; index < lyrics.lines.length; index += 1) {
 			const timeMs = lyrics.lines[index]?.timeMs;
-			if (typeof timeMs === 'number' && timeMs <= status.player.position + 350) {
+			if (typeof timeMs === 'number' && timeMs <= playerPosition + 600) {
 				active = index;
 			}
 		}
 		return active;
-	}, [lyrics, status?.player]);
+	}, [lyrics, playerPosition]);
 
-	async function loadStatus() {
+	async function loadStatus(options: { background?: boolean } = {}) {
 		const next = await apiFetch<MusicPlayerPayload>(`/guilds/${params.guildId}/music/player`);
+		if (options.background && Date.now() < optimisticUntilRef.current) {
+			return;
+		}
 		setStatus(next);
 		if (next.player) {
 			setVolume(next.player.volume);
@@ -103,6 +154,24 @@ export default function MusicPlayerPage() {
 		const next = await apiFetch<MusicLyricsPayload>(`/guilds/${params.guildId}/music/lyrics`);
 		setLyrics(next);
 		setLyricsMessage(null);
+		if (typeof next.position === 'number') {
+			setStatus((previous) => {
+				const player = previous?.player;
+				if (!previous || !player) {
+					return previous;
+				}
+
+				const sameTrack =
+					!next.track?.identifier ||
+					next.track.identifier === player.current?.identifier ||
+					next.track.uri === player.current?.uri;
+				if (!sameTrack) {
+					return previous;
+				}
+
+				return { ...previous, player: { ...player, position: next.position ?? player.position } };
+			});
+		}
 	}
 
 	useEffect(() => {
@@ -114,8 +183,8 @@ export default function MusicPlayerPage() {
 				}
 			});
 		const timer = window.setInterval(() => {
-			loadStatus().catch(() => undefined);
-		}, 5000);
+			loadStatus({ background: true }).catch(() => undefined);
+		}, 2500);
 		return () => {
 			active = false;
 			window.clearInterval(timer);
@@ -142,7 +211,191 @@ export default function MusicPlayerPage() {
 		};
 	}, [lyricsOpen, params.guildId, current?.identifier]);
 
-	async function control(action: string, extra: Record<string, unknown> = {}) {
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			setStatus((previous) => {
+				const player = previous?.player;
+				const currentTrack = player?.current;
+				if (
+					!previous ||
+					!player ||
+					!currentTrack ||
+					currentTrack.isStream ||
+					player.paused ||
+					!player.playing
+				) {
+					return previous;
+				}
+
+				return {
+					...previous,
+					player: {
+						...player,
+						position: Math.min(currentTrack.duration, player.position + 1000),
+					},
+				};
+			});
+		}, 1000);
+		return () => window.clearInterval(timer);
+	}, []);
+
+	useEffect(() => {
+		lyricLineRefs.current = [];
+	}, [lyrics?.track?.identifier, lyrics?.track?.uri]);
+
+	useEffect(() => {
+		if (!lyricsOpen || activeLyricIndex < 0) {
+			return;
+		}
+
+		lyricLineRefs.current[activeLyricIndex]?.scrollIntoView({
+			behavior: 'smooth',
+			block: 'center',
+		});
+	}, [activeLyricIndex, lyricsOpen]);
+
+	function updateOptimistic(mutator: (payload: MusicPlayerPayload) => MusicPlayerPayload) {
+		setStatus((previous) => (previous ? mutator(previous) : previous));
+	}
+
+	function optimisticAddTrack(track: MusicTrack) {
+		updateOptimistic((payload) => {
+			const player = payload.player;
+			if (!player || !player.current) {
+				return {
+					...payload,
+					active: true,
+					player: {
+						voiceId: player?.voiceId ?? null,
+						textId: player?.textId ?? '',
+						playing: true,
+						paused: false,
+						volume: player?.volume ?? volume,
+						position: 0,
+						loop: player?.loop ?? 'none',
+						current: queueTrack(track),
+						queue: [],
+						previous: player?.previous ?? [],
+					},
+				};
+			}
+
+			return {
+				...payload,
+				active: true,
+				player: {
+					...player,
+					queue: indexedQueue([...player.queue.filter(presentTrack), queueTrack(track)]),
+				},
+			};
+		});
+	}
+
+	function optimisticControl(action: string, extra: Record<string, unknown> = {}) {
+		updateOptimistic((payload) => {
+			if (action === 'stop') {
+				return { ...payload, active: false, suggestions: [], player: null };
+			}
+
+			if (action === 'autoplay') {
+				return {
+					...payload,
+					autoplay: typeof extra.enabled === 'boolean' ? extra.enabled : !payload.autoplay,
+				};
+			}
+
+			const player = payload.player;
+			if (!player) {
+				return payload;
+			}
+
+			if (action === 'pause') {
+				const paused = typeof extra.paused === 'boolean' ? extra.paused : !player.paused;
+				return {
+					...payload,
+					player: { ...player, paused, playing: !paused },
+				};
+			}
+
+			if (action === 'volume') {
+				const nextVolume = Math.min(150, Math.max(1, Number(extra.volume ?? player.volume)));
+				return { ...payload, player: { ...player, volume: nextVolume } };
+			}
+
+			if (action === 'loop') {
+				return { ...payload, player: { ...player, loop: nextLoopMode(player.loop) } };
+			}
+
+			if (action === 'shuffle') {
+				return {
+					...payload,
+					player: { ...player, queue: indexedQueue(shuffledTracks(player.queue.filter(presentTrack))) },
+				};
+			}
+
+			if (action === 'skip') {
+				const [nextTrack, ...rest] = player.queue.filter(presentTrack);
+				if (!nextTrack) {
+					return {
+						...payload,
+						player: { ...player, current: null, queue: [], playing: false, paused: true, position: 0 },
+					};
+				}
+
+				return {
+					...payload,
+					player: {
+						...player,
+						current: queueTrack(nextTrack),
+						queue: indexedQueue(rest),
+						previous: player.current
+							? [...player.previous.filter(presentTrack), queueTrack(player.current)].slice(-10)
+							: player.previous,
+						position: 0,
+						playing: true,
+						paused: false,
+					},
+				};
+			}
+
+			if (action === 'previous') {
+				const previous = player.previous.filter(presentTrack);
+				const previousTrack = previous.at(-1);
+				if (!previousTrack) {
+					return payload;
+				}
+
+				return {
+					...payload,
+					player: {
+						...player,
+						current: queueTrack(previousTrack),
+						queue: player.current
+							? indexedQueue([queueTrack(player.current), ...player.queue.filter(presentTrack)])
+							: player.queue,
+						previous: previous.slice(0, -1),
+						position: 0,
+						playing: true,
+						paused: false,
+					},
+				};
+			}
+
+			return payload;
+		});
+	}
+
+	async function control(
+		action: string,
+		extra: Record<string, unknown> = {},
+		optimistic?: () => void,
+	) {
+		const previous = status;
+		const keepOptimistic = Boolean(optimistic) && ['previous', 'skip', 'stop'].includes(action);
+		if (keepOptimistic) {
+			optimisticUntilRef.current = Date.now() + 1800;
+		}
+		optimistic?.();
 		setBusy(true);
 		setMessage(null);
 		try {
@@ -150,19 +403,27 @@ export default function MusicPlayerPage() {
 				method: 'PATCH',
 				body: JSON.stringify({ action, ...extra }),
 			});
-			setStatus(next);
-			if (next.player) {
+			if (!keepOptimistic) {
+				setStatus(next);
+			}
+			if (!keepOptimistic && next.player) {
 				setVolume(next.player.volume);
 			}
 		} catch (err) {
+			optimisticUntilRef.current = 0;
+			setStatus(previous);
 			setMessage(err instanceof Error ? err.message : 'Music action failed.');
 		} finally {
 			setBusy(false);
+			window.setTimeout(() => {
+				loadStatus().catch(() => undefined);
+			}, keepOptimistic ? 1800 : 700);
 		}
 	}
 
 	async function togglePause() {
-		await control('pause', { paused: !(status?.player?.paused ?? false) });
+		const paused = !(status?.player?.paused ?? false);
+		await control('pause', { paused }, () => optimisticControl('pause', { paused }));
 	}
 
 	async function search() {
@@ -190,7 +451,7 @@ export default function MusicPlayerPage() {
 	}
 
 	async function addTrack(track: MusicTrack) {
-		await control('add', { query: track.uri ?? track.title });
+		await control('add', { query: trackQuery(track) }, () => optimisticAddTrack(track));
 	}
 
 	if (authLoading || loading) {
@@ -214,7 +475,7 @@ export default function MusicPlayerPage() {
 						<button
 							className={`ghost-button compact-button ${status?.autoplay ? 'active-soft' : ''}`}
 							disabled={busy || !status?.active}
-							onClick={() => control('autoplay')}
+							onClick={() => control('autoplay', {}, () => optimisticControl('autoplay'))}
 							type="button"
 						>
 							<RefreshCw size={16} />
@@ -256,7 +517,7 @@ export default function MusicPlayerPage() {
 					<button
 						className="danger-button compact-button"
 						disabled={busy || !status?.active}
-						onClick={() => control('stop')}
+						onClick={() => control('stop', {}, () => optimisticControl('stop'))}
 						type="button"
 					>
 						<Square size={15} />
@@ -361,10 +622,10 @@ export default function MusicPlayerPage() {
 
 					<div className="player-controls">
 						<div className="control-row">
-							<button disabled={busy || !status?.active} onClick={() => control('shuffle')} type="button">
+							<button disabled={busy || !status?.active} onClick={() => control('shuffle', {}, () => optimisticControl('shuffle'))} type="button">
 								<Shuffle size={18} />
 							</button>
-							<button disabled={busy || !status?.active} onClick={() => control('previous')} type="button">
+							<button disabled={busy || !status?.active} onClick={() => control('previous', {}, () => optimisticControl('previous'))} type="button">
 								<SkipBack size={18} />
 							</button>
 							<button
@@ -375,10 +636,10 @@ export default function MusicPlayerPage() {
 							>
 								{status?.player?.paused ? <Play size={22} /> : <Pause size={22} />}
 							</button>
-							<button disabled={busy || !status?.active} onClick={() => control('skip')} type="button">
+							<button disabled={busy || !status?.active} onClick={() => control('skip', {}, () => optimisticControl('skip'))} type="button">
 								<SkipForward size={18} />
 							</button>
-							<button disabled={busy || !status?.active} onClick={() => control('loop')} type="button">
+							<button disabled={busy || !status?.active} onClick={() => control('loop', {}, () => optimisticControl('loop'))} type="button">
 								<RefreshCw size={18} />
 								<span>{status?.player?.loop ?? 'off'}</span>
 							</button>
@@ -403,7 +664,7 @@ export default function MusicPlayerPage() {
 									void control('volume', { volume });
 								}
 							}}
-							onPointerUp={() => control('volume', { volume })}
+							onPointerUp={() => control('volume', { volume }, () => optimisticControl('volume', { volume }))}
 							type="range"
 							value={volume}
 						/>
@@ -444,24 +705,24 @@ export default function MusicPlayerPage() {
 									<div style={{ width: `${progress}%` }} />
 								</div>
 								<div>
-									<span>{formatDuration(status?.player?.position ?? 0)}</span>
+									<span>{formatDuration(playerPosition)}</span>
 									<span>{current?.durationLabel ?? '0:00'}</span>
 								</div>
 							</div>
 							<div className="lyrics-control-row">
-								<button onClick={() => control('shuffle')} type="button">
+								<button onClick={() => control('shuffle', {}, () => optimisticControl('shuffle'))} type="button">
 									<Shuffle size={18} />
 								</button>
-								<button onClick={() => control('previous')} type="button">
+								<button onClick={() => control('previous', {}, () => optimisticControl('previous'))} type="button">
 									<SkipBack size={20} />
 								</button>
 								<button className="lyrics-play" onClick={() => void togglePause()} type="button">
 									{status?.player?.paused ? <Play size={24} /> : <Pause size={24} />}
 								</button>
-								<button onClick={() => control('skip')} type="button">
+								<button onClick={() => control('skip', {}, () => optimisticControl('skip'))} type="button">
 									<SkipForward size={20} />
 								</button>
-								<button onClick={() => control('loop')} type="button">
+								<button onClick={() => control('loop', {}, () => optimisticControl('loop'))} type="button">
 									<RefreshCw size={18} />
 								</button>
 							</div>
@@ -471,7 +732,7 @@ export default function MusicPlayerPage() {
 									max={150}
 									min={1}
 									onChange={(event) => setVolume(Number(event.target.value))}
-									onPointerUp={() => control('volume', { volume })}
+									onPointerUp={() => control('volume', { volume }, () => optimisticControl('volume', { volume }))}
 									type="range"
 									value={volume}
 								/>
@@ -484,6 +745,9 @@ export default function MusicPlayerPage() {
 										<p
 											className={index === activeLyricIndex ? 'active' : ''}
 											key={`${line.timeMs ?? index}-${line.text}`}
+											ref={(node) => {
+												lyricLineRefs.current[index] = node;
+											}}
 										>
 											{line.text}
 										</p>
