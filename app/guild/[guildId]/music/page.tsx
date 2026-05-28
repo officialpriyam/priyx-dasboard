@@ -161,6 +161,10 @@ export default function MusicPlayerPage() {
 		}
 	}
 
+	async function togglePause() {
+		await control('pause', { paused: !(status?.player?.paused ?? false) });
+	}
+
 	async function search() {
 		if (!query.trim()) {
 			return;
@@ -202,12 +206,9 @@ export default function MusicPlayerPage() {
 			<section className="music-player-page">
 				<div className="music-toolbar">
 					<div className="music-toolbar-actions">
-						<button className="ghost-button compact-button" type="button">
-							<ListMusic size={16} />
-							My Playlists
-						</button>
 						<button
 							className={`ghost-button compact-button ${status?.autoplay ? 'active-soft' : ''}`}
+							disabled={busy || !status?.active}
 							onClick={() => control('autoplay')}
 							type="button"
 						>
@@ -284,8 +285,14 @@ export default function MusicPlayerPage() {
 						) : (
 							<div className="music-empty-block">
 								<Disc3 size={38} />
-								<strong>Start playing something to get recommendations</strong>
-								<span>Priyx will suggest music based on the active track.</span>
+								<strong>
+									{current ? 'Recommendations are still loading' : 'Start playing something to get recommendations'}
+								</strong>
+								<span>
+									{current
+										? 'Priyx is looking for tracks related to the current song.'
+										: 'Priyx will suggest music based on the active track.'}
+								</span>
 							</div>
 						)}
 
@@ -329,6 +336,8 @@ export default function MusicPlayerPage() {
 									<button onClick={() => void addTrack(track)} type="button">Add</button>
 								</div>
 							))
+						) : searching ? (
+							<p>Searching...</p>
 						) : (
 							<p>Search results appear here.</p>
 						)}
@@ -356,7 +365,7 @@ export default function MusicPlayerPage() {
 							<button
 								className="play-button"
 								disabled={busy || !status?.active}
-								onClick={() => control('pause')}
+								onClick={() => void togglePause()}
 								type="button"
 							>
 								{status?.player?.paused ? <Play size={22} /> : <Pause size={22} />}
@@ -441,7 +450,7 @@ export default function MusicPlayerPage() {
 								<button onClick={() => control('previous')} type="button">
 									<SkipBack size={20} />
 								</button>
-								<button className="lyrics-play" onClick={() => control('pause')} type="button">
+								<button className="lyrics-play" onClick={() => void togglePause()} type="button">
 									{status?.player?.paused ? <Play size={24} /> : <Pause size={24} />}
 								</button>
 								<button onClick={() => control('skip')} type="button">

@@ -138,7 +138,7 @@ export interface MusicLyricLine {
 }
 
 export interface MusicLyricsPayload {
-	status: 'found' | 'finding' | 'disabled' | 'no-track';
+	status: 'found' | 'finding' | 'not-found' | 'disabled' | 'no-track';
 	provider: string;
 	track: MusicTrack | null;
 	position?: number;

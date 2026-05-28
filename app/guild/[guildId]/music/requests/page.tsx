@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import {
 	CirclePlus,
 	GripVertical,
-	Heart,
+	Music,
 	Pause,
 	RefreshCw,
 	Save,
@@ -28,6 +28,7 @@ type ConfigValue =
 	| ConfigValue[]
 	| { [key: string]: ConfigValue };
 type ConfigRecord = Record<string, ConfigValue>;
+type SongRequestTab = 'buttons' | 'display' | 'text';
 
 const buttonOptions = [
 	{ key: 'previous', label: 'Previous', icon: SkipBack },
@@ -40,7 +41,12 @@ const buttonOptions = [
 	{ key: 'stop', label: 'Stop', icon: Square },
 	{ key: 'shuffle', label: 'Shuffle', icon: Shuffle },
 	{ key: 'volumeUp', label: 'Volume+', icon: Volume2 },
-	{ key: 'favorite', label: 'Add Track To Favorites', icon: Heart },
+];
+
+const tabs: Array<{ key: SongRequestTab; label: string }> = [
+	{ key: 'buttons', label: 'Buttons' },
+	{ key: 'display', label: 'Display' },
+	{ key: 'text', label: 'Text' },
 ];
 
 function isRecord(value: ConfigValue | unknown): value is ConfigRecord {
@@ -67,6 +73,7 @@ export default function SongRequestsPage() {
 	const [config, setConfig] = useState<ConfigRecord>({});
 	const [message, setMessage] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [activeTab, setActiveTab] = useState<SongRequestTab>('buttons');
 
 	useEffect(() => {
 		if (!moduleInfo) {
@@ -200,7 +207,9 @@ export default function SongRequestsPage() {
 					<div className="discord-preview">
 						<div className="discord-channel"># {channelId ? textChannels.find((channel) => channel.id === channelId)?.name ?? 'song-requests' : 'song-requests'}</div>
 						<div className="discord-message">
-							<div className="disc-art">♪</div>
+							<div className="disc-art">
+								<Music size={18} />
+							</div>
 							<div className="discord-embed">
 								<strong>{String(requests.idleTitle ?? 'Music Player')}</strong>
 								<p>{String(requests.idleDescription ?? 'No music is currently playing. Join a voice channel and send a song name or link to start playing.')}</p>
@@ -237,94 +246,133 @@ export default function SongRequestsPage() {
 
 				<div className="song-settings-panel">
 					<div className="song-tabs">
-						<button className="active" type="button">Buttons</button>
-						<button type="button">Display</button>
-						<button type="button">Text</button>
-					</div>
-
-					<div className="song-request-fields">
-						<label className="config-field inline">
-							<div>
-								<strong>Enabled</strong>
-								<small>Allow typed song requests in the selected channel.</small>
-							</div>
+						{tabs.map((tab) => (
 							<button
-								className={`toggle ${requests.enabled === false ? '' : 'on'}`}
-								onClick={() => updateSongRequests({ enabled: requests.enabled === false })}
+								className={activeTab === tab.key ? 'active' : ''}
+								key={tab.key}
+								onClick={() => setActiveTab(tab.key)}
 								type="button"
 							>
-								<span />
+								{tab.label}
 							</button>
-						</label>
-
-						<label className="config-field">
-							<div>
-								<strong>Request Channel</strong>
-							</div>
-							<select
-								onChange={(event) => updateSongRequests({ channel: event.target.value })}
-								value={channelId}
-							>
-								<option value="">Not set</option>
-								{textChannels.map((channel) => (
-									<option key={channel.id} value={channel.id}>
-										#{channel.name}
-									</option>
-								))}
-							</select>
-						</label>
-
-						<label className="config-field">
-							<div>
-								<strong>Channel Name</strong>
-							</div>
-							<input
-								onChange={(event) => updateSongRequests({ channelName: event.target.value })}
-								value={String(requests.channelName ?? 'song-requests')}
-							/>
-						</label>
-
-						<label className="config-field">
-							<div>
-								<strong>Idle Title</strong>
-							</div>
-							<input
-								onChange={(event) => updateSongRequests({ idleTitle: event.target.value })}
-								value={String(requests.idleTitle ?? 'Music Player')}
-							/>
-						</label>
-
-						<label className="config-field">
-							<div>
-								<strong>Idle Description</strong>
-							</div>
-							<textarea
-								onChange={(event) => updateSongRequests({ idleDescription: event.target.value })}
-								value={String(requests.idleDescription ?? '')}
-							/>
-						</label>
+						))}
 					</div>
 
-					<div className="song-button-list">
-						{buttonOptions.map((button) => {
-							const Icon = button.icon;
-							const enabled = buttons[button.key] !== false;
-							return (
-								<div className="song-button-row" key={button.key}>
-									<GripVertical size={16} />
-									<Icon size={17} />
-									<strong>{button.label}</strong>
+					{activeTab === 'buttons' ? (
+						<div className="song-tab-panel">
+							<div className="song-request-fields compact-fields">
+								<label className="config-field inline">
+									<div>
+										<strong>Enabled</strong>
+										<small>Allow typed song requests in the selected channel.</small>
+									</div>
 									<button
-										className={`toggle ${enabled ? 'on' : ''}`}
-										onClick={() => toggleButton(button.key)}
+										className={`toggle ${requests.enabled === false ? '' : 'on'}`}
+										onClick={() => updateSongRequests({ enabled: requests.enabled === false })}
 										type="button"
 									>
 										<span />
 									</button>
+								</label>
+
+								<label className="config-field">
+									<div>
+										<strong>Request Channel</strong>
+									</div>
+									<select
+										onChange={(event) => updateSongRequests({ channel: event.target.value })}
+										value={channelId}
+									>
+										<option value="">Not set</option>
+										{textChannels.map((channel) => (
+											<option key={channel.id} value={channel.id}>
+												#{channel.name}
+											</option>
+										))}
+									</select>
+								</label>
+							</div>
+
+							<div className="song-button-list">
+								{buttonOptions.map((button) => {
+									const Icon = button.icon;
+									const enabled = buttons[button.key] !== false;
+									return (
+										<div className="song-button-row" key={button.key}>
+											<GripVertical size={16} />
+											<Icon size={17} />
+											<strong>{button.label}</strong>
+											<button
+												className={`toggle ${enabled ? 'on' : ''}`}
+												onClick={() => toggleButton(button.key)}
+												type="button"
+											>
+												<span />
+											</button>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					) : null}
+
+					{activeTab === 'display' ? (
+						<div className="song-request-fields">
+							<label className="config-field">
+								<div>
+									<strong>Channel Name</strong>
 								</div>
-							);
-						})}
-					</div>
+								<input
+									onChange={(event) => updateSongRequests({ channelName: event.target.value })}
+									value={String(requests.channelName ?? 'song-requests')}
+								/>
+							</label>
+
+							<label className="config-field">
+								<div>
+									<strong>Idle Title</strong>
+								</div>
+								<input
+									onChange={(event) => updateSongRequests({ idleTitle: event.target.value })}
+									value={String(requests.idleTitle ?? 'Music Player')}
+								/>
+							</label>
+
+							<label className="config-field">
+								<div>
+									<strong>Playing Title</strong>
+								</div>
+								<input
+									onChange={(event) => updateSongRequests({ playingTitle: event.target.value })}
+									value={String(requests.playingTitle ?? 'Now Playing')}
+								/>
+							</label>
+						</div>
+					) : null}
+
+					{activeTab === 'text' ? (
+						<div className="song-request-fields text-fields">
+							<label className="config-field">
+								<div>
+									<strong>Idle Description</strong>
+								</div>
+								<textarea
+									onChange={(event) => updateSongRequests({ idleDescription: event.target.value })}
+									value={String(requests.idleDescription ?? '')}
+								/>
+							</label>
+
+							<label className="config-field">
+								<div>
+									<strong>Request Placeholder</strong>
+								</div>
+								<textarea
+									onChange={(event) => updateSongRequests({ requestPlaceholder: event.target.value })}
+									value={String(requests.requestPlaceholder ?? 'Type a song name or link in this channel.')}
+								/>
+							</label>
+						</div>
+					) : null}
 				</div>
 			</section>
 			{message ? <div className="save-message">{message}</div> : null}

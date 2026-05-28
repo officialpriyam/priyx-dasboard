@@ -11,6 +11,8 @@
 	--primary: #8067ff;
 	--primary-2: #6d4df3;
 	--green: #45e889;
+	--music-accent: #1db954;
+	--music-accent-soft: rgba(29, 185, 84, 0.18);
 	--danger: #ff6675;
 	--yellow: #ffe044;
 	color-scheme: dark;
@@ -2450,7 +2452,8 @@ kbd {
 }
 
 .active-soft {
-	background: rgba(69, 232, 137, 0.12);
+	border-color: rgba(29, 185, 84, 0.38);
+	background: var(--music-accent-soft);
 	color: #a7ffc8;
 }
 
@@ -2489,8 +2492,8 @@ kbd {
 
 .music-search button {
 	padding: 0 14px;
-	background: rgba(128, 103, 255, 0.22);
-	color: #d8d0ff;
+	background: var(--music-accent-soft);
+	color: #b9ffd2;
 }
 
 .danger-button {
@@ -2532,7 +2535,7 @@ kbd {
 	border: 1px solid rgba(255, 255, 255, 0.1);
 	border-radius: 8px;
 	background:
-		radial-gradient(circle at 100% 0%, rgba(255, 102, 184, 0.12), transparent 20rem),
+		radial-gradient(circle at 100% 0%, rgba(29, 185, 84, 0.11), transparent 20rem),
 		rgba(255, 255, 255, 0.028);
 }
 
@@ -2552,7 +2555,7 @@ kbd {
 	width: 6px;
 	height: 34px;
 	border-radius: 999px;
-	background: #ff5db8;
+	background: var(--music-accent);
 	content: "";
 }
 
@@ -2604,6 +2607,7 @@ kbd {
 .search-result-row strong,
 .queue-track strong,
 .now-track strong {
+	display: block;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -2613,6 +2617,7 @@ kbd {
 .search-result-row small,
 .queue-track small,
 .now-track span {
+	display: block;
 	overflow: hidden;
 	color: var(--muted);
 	font-size: 12px;
@@ -2665,11 +2670,19 @@ kbd {
 }
 
 .queue-track img,
-.search-result-row img {
+.search-result-row img,
+.search-result-row > svg,
+.queue-track > svg {
 	width: 42px;
 	height: 42px;
 	border-radius: 6px;
 	object-fit: cover;
+	background: rgba(255, 255, 255, 0.06);
+}
+
+.search-result-row > svg,
+.queue-track > svg {
+	padding: 8px;
 }
 
 .queue-track em {
@@ -2686,7 +2699,15 @@ kbd {
 }
 
 .search-result-row {
-	grid-template-columns: 42px minmax(0, 1fr) auto auto;
+	grid-template-columns: 42px minmax(0, 1fr) max-content auto;
+}
+
+.queue-track > div,
+.search-result-row > div,
+.now-track > div {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
 }
 
 .search-result-row button {
@@ -2694,8 +2715,8 @@ kbd {
 	padding: 0 10px;
 	border: 0;
 	border-radius: 7px;
-	background: rgba(255, 93, 184, 0.18);
-	color: #ff9bd2;
+	background: var(--music-accent-soft);
+	color: #b9ffd2;
 	font-weight: 850;
 	cursor: pointer;
 }
@@ -2735,6 +2756,10 @@ kbd {
 	background: rgba(255, 255, 255, 0.06);
 }
 
+.now-track > svg:first-child {
+	padding: 8px;
+}
+
 .player-controls {
 	display: grid;
 	gap: 8px;
@@ -2772,7 +2797,7 @@ kbd {
 .control-row .play-button {
 	width: 52px;
 	height: 52px;
-	background: #ff5db8;
+	background: var(--music-accent);
 }
 
 .progress-row span {
@@ -2801,7 +2826,7 @@ kbd {
 }
 
 .volume-control input {
-	accent-color: #ff5db8;
+	accent-color: var(--music-accent);
 }
 
 .lyrics-overlay {
@@ -2822,7 +2847,7 @@ kbd {
 	inset: 0;
 	background:
 		linear-gradient(90deg, rgba(78, 38, 21, 0.78), rgba(44, 63, 51, 0.86), rgba(14, 16, 15, 0.95)),
-		radial-gradient(circle at 25% 75%, rgba(255, 93, 184, 0.12), transparent 28rem);
+		radial-gradient(circle at 25% 75%, rgba(29, 185, 84, 0.12), transparent 28rem);
 	background-position: center;
 	background-size: cover;
 	filter: blur(18px) saturate(0.65);
@@ -3095,7 +3120,7 @@ kbd {
 	place-items: center;
 	border-radius: 999px;
 	background: #111;
-	color: #ff5db8;
+	color: var(--music-accent);
 	font-weight: 900;
 }
 
@@ -3103,7 +3128,7 @@ kbd {
 	display: grid;
 	gap: 8px;
 	padding-left: 12px;
-	border-left: 3px solid #ff5db8;
+	border-left: 3px solid var(--music-accent);
 }
 
 .discord-embed p {
@@ -3121,7 +3146,7 @@ kbd {
 	border-radius: 6px;
 	background:
 		radial-gradient(circle, rgba(255, 255, 255, 0.25) 10%, transparent 11%) 0 0 / 48px 48px,
-		#ec5aa2;
+		var(--music-accent);
 	color: #120712;
 	font-size: 44px;
 	font-weight: 950;
@@ -3192,8 +3217,8 @@ kbd {
 }
 
 .song-tabs button.active {
-	border-color: #ff5db8;
-	color: #ff9bd2;
+	border-color: var(--music-accent);
+	color: #b9ffd2;
 }
 
 .song-request-fields {
@@ -3202,8 +3227,22 @@ kbd {
 	gap: 14px;
 }
 
-.song-request-fields .config-field:nth-child(5) {
+.song-request-fields .config-field:nth-child(5),
+.song-request-fields.text-fields .config-field {
 	grid-column: 1 / -1;
+}
+
+.song-tab-panel {
+	display: grid;
+	gap: 16px;
+}
+
+.song-request-fields.compact-fields {
+	grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr);
+}
+
+.song-request-fields.text-fields {
+	grid-template-columns: 1fr;
 }
 
 .song-button-list {
@@ -3243,7 +3282,8 @@ kbd {
 	.music-content-grid,
 	.web-player-bar,
 	.song-requests-page,
-	.song-request-fields {
+	.song-request-fields,
+	.song-request-fields.compact-fields {
 		grid-template-columns: 1fr;
 	}
 
