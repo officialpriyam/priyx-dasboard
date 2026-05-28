@@ -33,13 +33,16 @@ const statusOptions = ['online', 'idle', 'dnd', 'invisible'];
 const activityTypeOptions = ['message', 'voice', 'daily'];
 const messageModeOptions = ['plain', 'embed', 'both'];
 const embedBuilderModeOptions = ['plain', 'embed', 'v2'];
+const aiReplyModeOptions = ['embed', 'plain'];
+const loopModeOptions = ['none', 'track', 'queue'];
+const livePlayerStyleOptions = ['text', 'compact', 'extended'];
 const cardLayoutOptions = ['modern', 'classic', 'compact'];
 const avatarShapeOptions = ['circle', 'square', 'rounded'];
 const geminiModelOptions = [
 	'gemini-2.5-flash-lite',
 	'gemini-2.5-flash',
 ];
-const aiManagedKeys = new Set(['supportChannel', 'knowledgeBase', 'knowledgeDocuments']);
+const aiManagedKeys = new Set(['supportChannel', 'replyMode', 'knowledgeBase', 'knowledgeDocuments']);
 
 function isRecord(value: ConfigValue): value is ConfigRecord {
 	return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -69,9 +72,19 @@ function descriptionFor(path: string[]): string {
 		maxOpenPerUser: 'Maximum open tickets a member can have at the same time.',
 		defaultVolume: 'Default player volume for new music sessions.',
 		maxQueueSize: 'Maximum tracks allowed in the music queue.',
+		twentyFourSeven: 'Keep the music player connected after the queue ends.',
 		leaveOnEmptyDelay: 'Seconds to wait before leaving an empty voice channel.',
+		autoShuffle: 'Shuffle queued tracks automatically after new songs are added.',
+		defaultLoopMode: 'Repeat mode applied when a new music player starts.',
+		djMode: 'Restrict music controls to server managers and the configured DJ role.',
+		announceTrackStart: 'Post or update the live player when a new track starts.',
+		allowedTextChannels: 'Text channels where music commands are allowed. Empty allows every channel.',
+		allowedVoiceChannels: 'Voice channels where music playback is allowed. Empty allows every channel.',
+		voiceChannelStatus: 'Reserved setting for showing music status in voice channel metadata.',
+		autoLeaveCleanup: 'Remove queued songs requested by members who leave the player voice channel.',
 		sessionTtl: 'Dashboard login session length in seconds.',
 		messageType: 'Choose whether this output is a plain message, embed message, or both.',
+		replyMode: 'Choose whether AI answers are sent as embeds or normal text messages.',
 		defaultMode: 'Default message type used by new embed builder templates.',
 		deleteAfter: 'Seconds before Priyx deletes this message. Use 0 to keep it.',
 		assignRoles: 'Roles automatically assigned to a new member.',
@@ -86,6 +99,14 @@ function descriptionFor(path: string[]): string {
 		mentionUser: 'Mention the member in the configured welcome output.',
 		knowledgeBase: 'Pinned server information included as context before every AI answer.',
 		knowledgeDocuments: 'Dashboard-fed PDF, text, or markdown sources available to AI.',
+		songRequests: 'Dedicated channel where members can queue music by typing song names or links.',
+		channelName: 'Name used when the dashboard creates a song request channel.',
+		idleTitle: 'Title shown on the song request panel while no track is playing.',
+		idleDescription: 'Text shown on the song request panel while no track is playing.',
+		playingTitle: 'Title shown when the song request panel has an active track.',
+		requestPlaceholder: 'Helper text shown to members in the song request channel.',
+		nowPlayingStyle: 'Visual density for the Discord live player.',
+		buttonsInsideContainer: 'Place music controls inside the live player container when supported.',
 		content: 'Text content used by this item.',
 		source: 'Original file name or source label.',
 	};
@@ -221,6 +242,9 @@ function primitiveKind(path: string[], value: ConfigValue) {
 	if (key.includes('role')) {
 		return 'role';
 	}
+	if (key === 'channelname') {
+		return 'text';
+	}
 	if (key.includes('category')) {
 		return 'category';
 	}
@@ -241,6 +265,15 @@ function primitiveKind(path: string[], value: ConfigValue) {
 	}
 	if (key === 'messagetype') {
 		return 'messageMode';
+	}
+	if (key === 'replymode') {
+		return 'aiReplyMode';
+	}
+	if (key === 'defaultloopmode') {
+		return 'loopMode';
+	}
+	if (key === 'nowplayingstyle') {
+		return 'livePlayerStyle';
 	}
 	if (key === 'defaultmode') {
 		return 'embedBuilderMode';
@@ -477,6 +510,27 @@ export function ModuleConfigForm({
 				messageModeOptions.map((option) => ({ value: option, label: labelFor(option) })),
 				false,
 			);
+		} else if (kind === 'aiReplyMode') {
+			control = renderSelect(
+				path,
+				value,
+				aiReplyModeOptions.map((option) => ({ value: option, label: option === 'plain' ? 'Normal Text' : 'Embed' })),
+				false,
+			);
+		} else if (kind === 'loopMode') {
+			control = renderSelect(
+				path,
+				value,
+				loopModeOptions.map((option) => ({ value: option, label: labelFor(option) })),
+				false,
+			);
+		} else if (kind === 'livePlayerStyle') {
+			control = renderSelect(
+				path,
+				value,
+				livePlayerStyleOptions.map((option) => ({ value: option, label: labelFor(option) })),
+				false,
+			);
 		} else if (kind === 'embedBuilderMode') {
 			control = renderSelect(
 				path,
@@ -680,6 +734,7 @@ export function ModuleConfigForm({
 				</div>
 				<div className="ai-support-grid">
 					{renderPrimitive(['supportChannel'], config.supportChannel ?? '')}
+					{renderPrimitive(['replyMode'], config.replyMode ?? 'embed')}
 					{renderPrimitive(['knowledgeBase'], config.knowledgeBase ?? '')}
 				</div>
 				<AiKnowledgeDocuments

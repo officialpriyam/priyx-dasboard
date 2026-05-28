@@ -93,6 +93,60 @@ export interface GuildPayload {
 	notifications: unknown[];
 }
 
+export interface MusicTrack {
+	index?: number;
+	identifier: string | null;
+	title: string;
+	author: string;
+	duration: number;
+	durationLabel: string;
+	isStream: boolean;
+	uri: string | null;
+	artworkUrl: string | null;
+	requesterId: string | null;
+}
+
+export interface MusicPlayerPayload {
+	connected: boolean;
+	active: boolean;
+	autoplay: boolean;
+	filter: string;
+	suggestions: Array<MusicTrack | null>;
+	player: {
+		voiceId: string | null;
+		textId: string;
+		playing: boolean;
+		paused: boolean;
+		volume: number;
+		position: number;
+		loop: 'none' | 'track' | 'queue';
+		current: MusicTrack | null;
+		queue: Array<MusicTrack | null>;
+		previous: Array<MusicTrack | null>;
+	} | null;
+}
+
+export interface MusicSearchPayload {
+	type: string;
+	playlistName: string | null;
+	tracks: Array<MusicTrack | null>;
+}
+
+export interface MusicLyricLine {
+	timeMs: number | null;
+	text: string;
+}
+
+export interface MusicLyricsPayload {
+	status: 'found' | 'finding' | 'disabled' | 'no-track';
+	provider: string;
+	track: MusicTrack | null;
+	position?: number;
+	lines: MusicLyricLine[];
+	synced: boolean;
+	message: string | null;
+}
+
 export class ApiError extends Error {
 	public constructor(
 		message: string,

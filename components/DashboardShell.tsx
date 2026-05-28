@@ -13,7 +13,9 @@ import {
 	Home,
 	Lock,
 	LogOut,
+	ListMusic,
 	MessageSquare,
+	Music,
 	Search,
 	Server,
 	Shield,
@@ -40,6 +42,8 @@ const safetyLinks = [
 ];
 
 const engagementLinks = [
+	{ href: '/music', label: 'Music Player', icon: Music },
+	{ href: '/music/requests', label: 'Song Requests', icon: ListMusic },
 	{ href: '/module/welcomer', label: 'Welcome', icon: Bell },
 	{ href: '/module/tempvoice', label: 'Voice Rooms', icon: Server },
 ];
